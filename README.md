@@ -9,13 +9,14 @@ Terraform é uma ferramenta de código aberto usada para automatizar a criação
 Antes de começar, você precisará ter uma conta na AWS e instalar o Terraform em seu computador. Certifique-se de ter as credenciais da AWS configuradas em sua máquina para poder provisionar os recursos, é interessante possuir o git na máquina para facilitar o provisionamento da aplicação. 
   
 Você pode configurar suas credenciais com o comando:
-  terraform
+```
    export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
    export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
+```
    
-Você também precisa ter o aws cli configurado com suas credenciais de acesso e para a região us-east-1(Você pode saber mais sobre a configuração do aws cli clicando [aqui](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure..html)).
+Você também precisa ter o aws cli configurado com suas credenciais de acesso e para a região us-east-1 (Você pode saber mais sobre a configuração do aws cli clicando [aqui](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure..html)).
 
-É imoportante criar um par de chaves na aws para iniciar o provisionamento e ter acesso as instâncias caso necessário. Para criar um par de chaves na AWS pelo CLI, você pode usar o seguinte comando:
+É importante criar um par de chaves na aws para iniciar o provisionamento e ter acesso as instâncias caso necessário. Para criar um par de chaves na AWS pelo CLI, você pode usar o seguinte comando:
 `AWS CLI
 aws ec2 create-key-pair --key-name my-key-pair --query 'KeyMaterial' --output text > my-key-pair.pem
 `
@@ -35,8 +36,9 @@ Lembre-se de baixar a chave e guardá-la com segurança pois ela apenas pode ser
 Para iniciar o provisionamento basta utilizar três comandos em sequência no diretório *terraform-provisioning*.
 
 O primeiro comando a ser realizado é:
-terraform
+```
 terraform init
+```
  
 Que irá inicializar um diretório de trabalho do Terraform, incluindo a instalação de plugins e a configuração de backends de estado.
 
@@ -45,9 +47,9 @@ Que irá inicializar um diretório de trabalho do Terraform, incluindo a instala
 ![output terraform init](https://github.com/MarcoBosc/akigaraiow/assets/105826129/0dc12e2f-16ea-4a16-b071-21d3b119e3d9)
 
 Após inicializar o ambiente de trabalho do terraform, utilize o comando: 
-terraform
+```
 terraform plan -out=plan.out
- 
+```
 Que será usado para criar um arquivo de plano de execução da infraestrutura.
 
 
@@ -57,9 +59,9 @@ Que será usado para criar um arquivo de plano de execução da infraestrutura.
 
 
 O terceiro comando a ser executado é o comando:
-terraform
+```
 terraform apply plan.out
-
+```
 O comando irá aplicar a infraestrutura projetada nos arquivos do Terraform dentro ambiente da aws. Utilizando como base os arquivos do plano de execução *plan.out* criado anteriormente.
 
 Após isso iniciará o processo de provisionamento do ambiente com base na infraestrutura presente nos arquivos terraform. O processo leva cerca de 5 minutos para a completa execução.
@@ -67,22 +69,25 @@ Após isso iniciará o processo de provisionamento do ambiente com base na infra
 ## O processo de execução irá seguir as seguintes etapas:
 
 ### 1. Criar a VPC.
- O primeiro recuso a ser provisionado será a VPC. Ela será usada para criar uma rede virtual personalizada que pode ser conectada com outros recursos da AWS, como instâncias EC2, RDS, EFS, ELB, entre outros. Nessa fase também serão criadas as subnets públicas e privadas necessárias para a aplicação.
+ O primeiro recurso a ser provisionado será a VPC. Ela será usada para criar uma rede virtual personalizada que pode ser conectada com outros recursos da AWS, como instâncias EC2, RDS, EFS, ELB, entre outros. Nessa fase também serão criadas as subnets públicas e privadas necessárias para a aplicação. O arquivo responsável pela criação da VPC e sub-redes públicas e privadas é o network.tf.
 
 ### 2. Provisionar o Internet Gateway.
-Após isso, será provisionado o Internet Gateway. Que será usado para permitir que nossa aplicação se comunique com a Internet.
+Após isso, será provisionado o Internet Gateway. Que será usado para permitir que nossa aplicação se comunique com a Internet. Ainda com responsabilidade do arquivo network.tf.
 
 ### 3. Provisionar o NAT Gateway.
-Em seguida, será criado um NAT Gateway. Ele será usado para permitir que nossos recursos privados na VPC acessem a Internet por meio de uma subnet pública.
+Em seguida, será criado um NAT Gateway. Ele será usado para permitir que nossos recursos privados na VPC acessem a Internet por meio de uma subnet pública. O NAT Gateway será privisionado pelo arquivo private-network.tf.
 
-### 4. Provisionar o EFS.
-O próximo recurso criado é o EFS. Ele será usado para armazenar os arquivos de criação e volumes do *Wordpress* da nossa aplicação. Bem como será o responsável por compartilhar os arquivos entre todas as instancias.
+### 4. Criar os Security Groups
+O arquivo security-groups irá criar os security groups e suas regras. Servirão como recursos de segurança na nuvem usados para controlar o tráfego de entrada e saída das instâncias ou recursos da nuvem. Eles funcionam como uma espécie de firewall virtual que permite especificar quais protocolos, portas e endereços IP podem acessar um determinado recurso na nuvem.
 
-### 5. Provisionar o RDS.
-Agora, será provisionado um Amazon RDS com mysql para armazenar os dados do container *Wordpress* na nossa aplicação.
+### 5. Provisionar o EFS.
+O próximo recurso criado é o EFS. Ele será usado para armazenar os arquivos de criação e volumes do *Wordpress* da nossa aplicação. Bem como será o responsável por compartilhar os arquivos entre todas as instancias. O arquivo responsável pela criação do efs e seu security group é o EFS.tf.
 
-### 6. Provisionar o Auto Scaling.
-Agora, será criado o Auto Scaling. Ele será usado para aumentar ou diminuir automaticamente o número de instâncias da nossa aplicação com base na demanda. Ele também será o responsável por carregar dentro do launch template o *user data* de nossas máquinas virtuais que irão executar os containers.
+### 6. Provisionar o RDS.
+Agora, será provisionado um Amazon RDS com mysql para armazenar os dados do container *Wordpress* na nossa aplicação. O arquivo que irá criar o RDS e seu grupo de subredes é o mysql-rds.tf.
+
+### 7. Provisionar o Auto Scaling.
+Após a finalização do recurso RDS e obtenção do endpoint do mesmo, será criado o Auto Scaling a partir do arquivo autoscaling.tf. Ele será usado para aumentar ou diminuir automaticamente o número de instâncias da nossa aplicação com base na demanda. Ele também será o responsável por carregar dentro do launch template o *user data* de nossas máquinas virtuais que irão executar os containers.
 bash
 #!/bin/bash
               yum update -y
@@ -116,7 +121,7 @@ services:
     volumes:
       - /efs/wp_data:/var/www/html
   db:
-    image: mysql:8.0.27
+    image: mysql:latest
     volumes:
       - /efs/db_data:/var/lib/mysql
     restart: always
@@ -186,8 +191,8 @@ docker-compose up
 Por fim será inicializado os containeres que irão virtualizar a aplicação *Wordpress* e *Mysql*.
 
 
-### 7. Provisionar o ALB.
-Por último, será criado o Application Load Balancer (ALB). Ele será usado para distribuir o tráfego entre as instâncias da nossa aplicação.
+### 8. Provisionar o ALB.
+Por último, será criado o Application Load Balancer (ALB) e target groups pelo arquivo ALB.tf. Ele será usado para distribuir o tráfego entre as instâncias da nossa aplicação.
 
 ### A saída esperada para o comando *terraform apply plan.out*:
 O terraform irá mostrar uma mensagem de sucesso da aplicação juntamente com a quantidade de itens provisionados. E logo abaixo os outputs configurados no terraform para mostrar as saídas necessárias.
