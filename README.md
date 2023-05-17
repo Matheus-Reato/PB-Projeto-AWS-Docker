@@ -9,7 +9,6 @@ Terraform é uma ferramenta de código aberto usada para automatizar a criação
 Antes de começar, você precisará ter uma conta na AWS e instalar o Terraform em seu computador. Certifique-se de ter as credenciais da AWS configuradas em sua máquina para poder provisionar os recursos, é interessante possuir o git na máquina para facilitar o provisionamento da aplicação. 
   
 Você pode configurar suas credenciais com o comando:
-  terraform
   ```
    export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
    export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
